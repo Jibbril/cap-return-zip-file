@@ -43,27 +43,22 @@ module.exports = srv => {
 
     srv.on('getBinary', async req => {
         await getZip().then(async content => {
-            req._.res.set('content-type', 'application/octet-stream');
-            req._.res.set('content-disposition', 'attachment; filename="from_cap.zip"');
-            req._.res.set('content-length', content.length);
+            
+            const res = cds.context.http.res;
+            res.set('content-type', 'application/zip');
+            res.set('content-disposition', 'attachment; filename="from_cap.zip"');
+            res.set('content-length', content.length);
 
             const stream = new Readable();
             stream.push(content);
             stream.push(null);
 
-            stream.pipe(req._.res);
+            stream.pipe(res);
 
             await new Promise((resolve, reject) => {
                 stream.on('end', resolve);
-                stream.on('data', (buf) => {
-                    console.log(buf.length);
-                })
                 stream.on('error', err => reject(err));
             });
-
-            await new Promise(resolve => {
-                setTimeout(resolve, 5000);
-            })
         })
     });
 }
