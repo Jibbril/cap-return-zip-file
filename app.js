@@ -2,7 +2,10 @@ const JSZip = require('jszip');
 const { saveAs } = require('file-saver');
 const fs = require('fs');
 const papa = require('papaparse');
+const express = require('express');
+const { Readable } = require('stream');
 
+const app = express();
 
 const data = [
     [{
@@ -25,27 +28,44 @@ const data = [
     }]
 ]
 
-const aCsvs = data.map(arr => {
-    return papa.unparse(arr)
-});
+const buildCsvs = () => {
+    return data.map(arr => {
+        return papa.unparse(arr)
+    });
+}
 
-const zip = new JSZip();
+const getZip = async () => {
+    const aCsvs = buildCsvs();
+    const zip = new JSZip();
+    aCsvs.forEach((csv, i) => {
+        zip.file(`test${i}.csv`, csv);
+    });
+    return zip.generateAsync({type:"nodebuffer"});
+}
 
-aCsvs.forEach((csv, i) => {
-    zip.file(`test${i}.csv`, csv);
-});
 
+app.get('/getBinary', async (req, res) => {
+    await getZip().then(async content => {
+        res.set('Content-Type', 'application/zip');
+        res.set('Content-Disposition', 'attachment; filename="from_express_nodebuffer.zip"');
 
-// zip.generateAsync({type:"base64"}).then(content => {
-//     saveAs(content, "test.zip");
-// })
+        const stream = new Readable();
+        stream.push(content);
+        stream.push(null);
 
-zip.generateAsync({type:"nodebuffer"}).then(content => {
-    fs.writeFile("test.zip", content, err => {
-        if (err) {
-            console.log(err);
-        } else {
-            console.log("success");
-        }
+        stream.pipe(res);
+
+        await new Promise((resolve, reject) => {
+            stream.on('end', resolve);
+            stream.on('error', err => reject(err));
+        });
     })
-})
+});
+
+// app.listen(3000, () => {
+//     console.log('listening on port 3000');
+// });
+
+module.exports = {
+    getZip
+}
