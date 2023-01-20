@@ -1,9 +1,8 @@
 const JSZip = require('jszip');
-const { saveAs } = require('file-saver');
-const fs = require('fs');
 const papa = require('papaparse');
 const express = require('express');
 const { Readable } = require('stream');
+const XLSX = require('xlsx');
 
 const app = express();
 
@@ -28,43 +27,77 @@ const data = [
     }]
 ]
 
-const buildCsvs = () => {
+const buildCsv = () => {
     return data.map(arr => {
         return papa.unparse(arr)
     });
 }
 
-const getZip = async () => {
-    const aCsvs = buildCsvs();
+const buildXlsx = () => {
+    return data.map((arr, i) => {
+        const book = XLSX.utils.book_new();
+        const sheet = XLSX.utils.json_to_sheet(arr);
+        XLSX.utils.book_append_sheet(book, sheet, `test${i}`);
+        return XLSX.write(book, {type: 'buffer'});
+    });
+}
+
+const buildJson = () => {
+    return data.map(arr => {
+        return JSON.stringify(arr);
+    });
+}
+
+const buildDocs = (type) => {
+    switch (type) {
+        case 'csv' : return buildCsv();
+        case 'xlsx': return buildXlsx();
+        case 'json': return buildJson();
+    }
+}
+
+const getZip = async (type) => {
+    const aDocs = buildDocs(type);
     const zip = new JSZip();
-    aCsvs.forEach((csv, i) => {
-        zip.file(`test${i}.csv`, csv);
+    aDocs.forEach((doc, i) => {
+        zip.file(`test${i}.${type}`, doc);
     });
     return zip.generateAsync({type:"nodebuffer"});
 }
 
+const loadResponse = async (res, type) => {
+    const content = await getZip(type);
+    res.set('Content-Type', 'application/zip');
+    res.set('Content-Disposition', 'attachment; filename="from_express_nodebuffer.zip"');
 
-app.get('/getBinary', async (req, res) => {
-    await getZip().then(async content => {
-        res.set('Content-Type', 'application/zip');
-        res.set('Content-Disposition', 'attachment; filename="from_express_nodebuffer.zip"');
+    const stream = new Readable();
+    stream.push(content);
+    stream.push(null);
 
-        const stream = new Readable();
-        stream.push(content);
-        stream.push(null);
+    stream.pipe(res);
 
-        stream.pipe(res);
+    await new Promise((resolve, reject) => {
+        stream.on('end', resolve);
+        stream.on('error', err => reject(err));
+    });
+}
 
-        await new Promise((resolve, reject) => {
-            stream.on('end', resolve);
-            stream.on('error', err => reject(err));
-        });
-    })
+
+app.get('/getCsv', async (req, res) => {
+    await loadResponse(res, 'csv');
 });
 
-// app.listen(3000, () => {
-//     console.log('listening on port 3000');
-// });
+app.get('/getXlsx', async (req, res) => {
+    await loadResponse(res, 'xlsx');
+});
+
+app.get('/getJson', async (req, res) => {
+    await loadResponse(res, 'json');
+});
+
+app.listen(3000, () => {
+    console.log('listening on port 3000');
+});
 
 module.exports = {
     getZip
