@@ -9,10 +9,10 @@ This example repo showcases an issue where SAP CAP seems to be corrupting .zip f
  
 ## CAP: Custom route
  - Launch CAP using the .vscode launch config.
- - Go to `localhost:4004/getZip` (route setup from [server.js](https://github.com/Jibbril/cap-return-zip-file/blob/main/server.js#L4).
+ - Go to `localhost:4004/getZip` (route setup from [server.js](https://github.com/Jibbril/cap-return-zip-file/blob/main/server.js#L4)).
  - A zip file is downloaded, but it is corrupted and cannot be opened.
  
 ## CAP: Function handler
  - Launch CAP using the .vscode launch config.
- - Go to `localhost:4004/my/getZip()`(route setup from [srv/my-service.js](https://github.com/Jibbril/cap-return-zip-file/blob/main/srv/my-service.js#L17).
+ - Go to `localhost:4004/my/getZip()`(route setup from [srv/my-service.js](https://github.com/Jibbril/cap-return-zip-file/blob/main/srv/my-service.js#L17)).
  - A zip file is downloaded, but it is corrupted and cannot be opened.
